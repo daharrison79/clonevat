@@ -54,37 +54,37 @@
                     type: Type.OBJECT,
                     properties:{
                         face_shape:{type:Type.STRING},
-                        // jawline_definition:{type:Type.NUMBER},
-                        // cheekbone_prominence:{type:Type.NUMBER},
+                        jawline_definition:{type:Type.NUMBER},
+                        cheekbone_prominence:{type:Type.NUMBER},
                         eye_shape:{type:Type.STRING},
                         eye_color:{type:Type.STRING},
-                        // eyebrow_shape:{type:Type.STRING},
-                        // nose_shape:{type:Type.STRING},
-                        // lip_fullness:{type:Type.NUMBER},
+                        eyebrow_shape:{type:Type.STRING},
+                        nose_shape:{type:Type.STRING},
+                        lip_fullness:{type:Type.NUMBER},
                         hair_color:{type:Type.STRING},
                         hair_style:{type:Type.STRING},
-                        // makeup_style:{type:Type.STRING},
-                        // makeup_intensity:{type:Type.NUMBER}
+                        makeup_style:{type:Type.STRING},
+                        makeup_intensity:{type:Type.NUMBER}
                     },
-                    required:["face_shape","eye_shape","eye_color","hair_color","hair_style"]
+                    required:["face_shape","jawline_definition","cheekbone_prominence","eye_shape","eye_color","eyebrow_shape","nose_shape","lip_fullness","hair_color","hair_style","makeup_style","makeup_intensity"]
                 },
-                // body_features:{
-                //     type: Type.OBJECT,
-                //     properties:{
-                //         frame_structure:{type:Type.STRING},
-                //         skin_tone:{type:Type.STRING},
-                //         body_type:{type:Type.STRING},
-                //         waist_to_hip_ratio_score:{type:Type.NUMBER},
-                //         muscle_definition:{type:Type.NUMBER},
-                //         hip_size:{type:Type.NUMBER},
-                //         breast_cup_size:{type:Type.STRING},
-                //         breast_shape:{type:Type.STRING},
-                //         shoulder_width:{type:Type.STRING}
-                //     },
-                //     required:["frame_structure","skin_tone","body_type","waist_to_hip_ratio_score","hip_size","muscle_definition","breast_cup_size","breast_shape","shoulder_width"]
-                // }
+                body_features:{
+                    type: Type.OBJECT,
+                    properties:{
+                        frame_structure:{type:Type.STRING},
+                        skin_tone:{type:Type.STRING},
+                        body_type:{type:Type.STRING},
+                        waist_to_hip_ratio_score:{type:Type.NUMBER},
+                        muscle_definition:{type:Type.NUMBER},
+                        hip_size:{type:Type.NUMBER},
+                        breast_cup_size:{type:Type.STRING},
+                        breast_shape:{type:Type.STRING},
+                        shoulder_width:{type:Type.STRING}
+                    },
+                    required:["frame_structure","skin_tone","body_type","waist_to_hip_ratio_score","hip_size","muscle_definition","breast_cup_size","breast_shape","shoulder_width"]
+                }
             },
-            required:["facial_features"]
+            required:["facial_features","body_features"]
         };
 
         const fileToBase64=(file)=>new Promise((resolve,reject)=>{
@@ -116,7 +116,7 @@
                     model:'gemini-3.5-flash-lite',
                     contents:[
                         {inlineData:{mimeType: file.type, data: base64Data}},
-                        'Analyse the image strictly for visible features. Ignore lighting, image quality, background, wardrobe and facial expressions. Return only JSON according to the schema.'
+                        'Analyse the image strictly for physical features. Ignore lighting, image quality, background, wardrobe and facial expressions. Return values according to the schema.'
                     ],
                     config:{
                         responseMimeType:'application/json',
