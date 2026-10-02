@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feature Extractor</title>
+    <style>
+        body{font-family: -apple-sytem, BlinkMacSystemFont, sans-serif; padding: 16px; max-width: 480px; margin: 0 auto; background: #f9f9f9;}
+        .card{background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 16px;}
+        label{font-weight: 600; font-size: 14px; display: block; margin-bottom: 6px;}
+        input[type="password"], input[type="file"] {width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; margin-bottom: 12px;}
+        button{width: 100%; padding: 12px; background: #007aff; color: white; border: none; border-radius: 6px; box-sizing: border-box; margin-bottom: 12px;}
+        button:disabled{background: #a2a2a2;}
+        textarea{width: 100%; height: 160px; font-family: monospace; font-size: 12px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;}
+        #status { font-size: 14px; font-weight: bold; color: #333; margin-top: 10px;}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <label for="apiKey">Gemini API Key</label>
+        <input type="password" id="apiKey" placeholder="PASTE KEY HERE">
+
+        <label for="imageInput">Upload Portrait / Photo</label>
+        <input type="file" id="imageInput" accept="image/*" capture="environment">
+
+        <button id="analyzeBtn">Analyze Image</button>
+        <div id="status"></div>
+    </div>
+    
+    <div class="card">
+        <label for="csvOutput">CSV Database State</label>
+        <textarea id="csvOutput" readonly></textarea>
+        <button id="downloadBtn">Download CSV File</button>
+    </div>
+
+    <script type="module">
+        import {GoogleGenAI, Type} from "https//esm.sh/@google/genai";
+
+        let csvRows=JSON.parse(localStorage.getItem('feature_csv_data')) || [
+            "image_id,feature_category,feature_name,feature_value,tag_weight"
+        ]
+
+        let imgCount=parseInt(localStorage.getItem('feature_img_count') || "1");
+
+        const updateTextarea=()=>{
+            document.getElementById('csvOutput').value=csvRows.join('\n\'');
+        };
+        updateTextarea();
+
+        const featureSchema={
+            type: Type.OBJECT,
+            properties:{
+                facial_features:{
+                    type: Type.OBJECT,
+                    properties:{
+                        face_shape:{type:Type.STRING},
+                        jawline_definition:{type:Type.NUMBER},
+                        cheekbone_prominence:{type:Type.NUMBER},
+                        eye_shape:{type:Type.STRING},
+                        eye_color:{type:Type.STRING},
+                        eyebrow_shape:{type:Type.STRING},
+                        nose_shape:{type:Type.STRING},
+                        lip_fullness:{type:Type.NUMBER},
+                        hair_color:{type:Type.STRING},
+                        hair_style:{type:Type.STRING},
+                        makeup_style:{type:Type.STRING},
+                        makeup_intensity:{type:Type.NUMBER}
+                    },
+                    required:["face_shape,jawline_definition,cheekbone_prominence,eye_shape,eye_color,eyebrow_shape,nose_shape,lip_fullness,hair_color,hair_style,makeup_style,makeup_intensity"]
+                },
+                body_features:{
+                    type: Type.OBJECT,
+                    properties:{
+                        frame_structure:{type:Type.STRING},
+                        skin_tone:{type:Type.STRING},
+                        body_type:{type:Type.STRING},
+                        waist_to_hip_ratio_score:{type:Type.NUMBER},
+                        muscle_definition:{type:Type.NUMBER},
+                        hip_size:{type:Type.NUMBER},
+                        breast_cup_size:{type:Type.STRING},
+                        breast_shape:{type:Type.STRING},
+                        shoulder_width:{type:Type.STRING}
+                    },
+                    required:["frame_structure,skin_tone,body_type,waist_to_hip_ratio_score,hip_size,muscle_definition,breast_cup_size,breast_shape,shoulder_width"]
+                }
+            },
+            required:["facial_features,body_features"]
+        };
+
+        const fileToBase64=(file)=>new Promise((resolve,reject)=>{
+            const reader=new FileReader();
+            reader.onload=()=>resolve(reader.result.split(',')[1]);
+            reader.onerror=reject;
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('analyzeBtn').addEventListener('click', async()=>{
+            const key=document.getElementById('apiKey').value.trim();
+            const file=document.getElementById('imageInpute').files[0];
+            const status=document.getElementById('status');
+
+            if (!key || !file){
+                alert("Please enter your API Key and select an image.");
+                return;
+            }
+
+            status.innerText="Analyzing with Gemini...";
+            document.getElementById('analyzeBtn').disabled=true;
+
+            try{
+                const ai=new GoogleGenAI({apiKey: key});
+                const base64Data=await fileToBase64(file);
+                const ImgId=`img_${String(imgCount).padStart(3,'0')}`;
+
+                const response=await ai.models.generateContent({
+                    model:'gemini-2.5-flash',
+                    contents:[
+                        {inlineData:{mimeType: file.type, data: base64Data}},
+                        'Analyse the image strictly for physical features. Ignore lighting, image quality, background, wardrobe and facial expressions. Return values according to the schema.'
+                    ],
+                    config:{
+                        responseMimeType:'application/json',
+                        responseSchema: featureSchema,
+                    }
+                });
+
+                const data= JSON.parse(response.text);
+
+                for (const [k,v] of Object.entries(data.facial_features)){
+                    const weight=typeof v === 'number' ? v: 1.0;
+                    csvRows.push('${imgId},body,${k},${v},${weight}');
+                }
+
+                imgCount++;
+                localStorage.setItem('feature_csv_data', JSON.stringify(csvRows));
+                localStorage.setItem('feature_img_count', imgCount.toString());
+
+                updateTextarea();
+                status.innerText='Success! Added ${imgID}';
+                document.getElementById('imageInput').value="";
+              } catch(err){
+                status.innerText="Error analyzing image. Check console.";
+              } finally{
+                document.getElementById('analyzeBtn').disabled=false;
+              }
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () =>{
+            const blob=new Blob([csvRows.join('\n')],{type:'text/csv'});
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement('a');
+            a.href=url;
+            a.download='features_database.csv';
+            a.click();''
+        });
+    </script>
+</body>
+</html>
