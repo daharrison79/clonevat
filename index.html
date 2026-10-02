@@ -23,6 +23,13 @@
         <label for="imageInput">Upload Portrait / Photo</label>
         <input type="file" id="imageInput" accept="image/*">
 
+        <label for="imageType">Image Type</label>
+        <select id="imageType">
+            <option value="auto">Auto Detect</option>
+            <option value="portrait">Portrait</option>
+            <option value="fullbody">Full Body</option>
+        </select>
+
         <button id="analyzeBtn">Analyze Image</button>
         <div id="status"></div>
     </div>
@@ -97,6 +104,7 @@
         document.getElementById('analyzeBtn').addEventListener('click', async()=>{
             const key=document.getElementById('apiKey').value.trim();
             const file=document.getElementById('imageInput').files[0];
+            const imageType=document.getElementById('imageType').value;
             const status=document.getElementById('status');
 
             if (!key || !file){
@@ -111,25 +119,45 @@
                 const ai=new GoogleGenAI({apiKey: key});
                 const base64Data=await fileToBase64(file);
                 const imgId=`img_${String(imgCount).padStart(3,'0')}`;
+                
+                let prompt = `
+                Analyse the image strictly for physical features. Ignore lighting, image quality, background, wardrobe and facial expressions. Return ONLY valid JSON matching the schema.`;
+                if (imageType === "portrait") {
+                    prompt +=`
+                        This is a portrait image. Fill all facial features. Leave all body fields blank.`;
+                }
+                if (imageType === "fullbody") {
+                    prompt += `
+                        This is a full body image. Fill both facial and body features.`;
+                }
+                if (imageType === "auto") {
+                    prompt += `
+                        Determine if the image is portrait or full-body. For any body features that cannot be observed, use "not_visible".`;
+                }
 
-                const response=await ai.models.generateContent({
-                    model:'gemini-3.5-flash-lite',
-                    contents:[
-                        {inlineData:{mimeType: file.type, data: base64Data}},
-                        'Analyse the image strictly for physical features. Ignore lighting, image quality, background, wardrobe and facial expressions. Return values according to the schema.'
+                const response = await ai.models.generateContent({
+                    model: 'gemini-3.5-flash-lite',
+                    contents: [
+                        {inlineData: {mimeType: file.type,data: base64Data}},
+                        prompt
                     ],
-                    config:{
-                        responseMimeType:'application/json',
-                        responseSchema: featureSchema,
+                    config: {
+                        responseMimeType: 'application/json',
+                        responseSchema: featureSchema
                     }
                 });
 
-                const text= response.text();
-                const data= JSON.parse(text);
+                const text= response.text;
+                const data = JSON.parse(text);
 
                 for (const [k,v] of Object.entries(data.facial_features)){
                     const weight=typeof v === 'number' ? v: 1.0;
                     csvRows.push(`${imgId},facial,${k},${v},${weight}`);
+                }
+
+                for (const [k,v] of Object.entries(data.body_features)){
+                    const weight=typeof v === 'number' ? v: 1.0;
+                    csvRows.push(`${imgId},body,${k},${v},${weight}`);
                 }
 
                 imgCount++;
