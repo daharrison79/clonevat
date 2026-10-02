@@ -124,7 +124,8 @@
                     }
                 });
 
-                const data= JSON.parse(response.text);
+                const text= response.text();
+                const data= JSON.parse(text);
 
                 for (const [k,v] of Object.entries(data.facial_features)){
                     const weight=typeof v === 'number' ? v: 1.0;
@@ -139,7 +140,7 @@
                 status.innerText=`Success! Added ${imgId}`;
                 document.getElementById('imageInput').value="";
               } catch(err){
-                status.innerText="Error analyzing image. Check console.";
+                status.innerText=err.message || String(err);
               } finally{
                 document.getElementById('analyzeBtn').disabled=false;
               }
