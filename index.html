@@ -124,15 +124,15 @@
                 Analyse the image strictly for physical features. Ignore lighting, image quality, background, wardrobe and facial expressions. Return ONLY valid JSON matching the schema.`;
                 if (imageType === "portrait") {
                     prompt +=`
-                        This is a portrait image. Fill all facial features. Leave all body fields blank.`;
+                        This is a portrait image. Fill all facial features. Leave all body fields blank and set body field tag weight to zero.`;
                 }
                 if (imageType === "fullbody") {
                     prompt += `
-                        This is a full body image. Fill both facial and body features.`;
+                        This is a full body image. Fill all visible body features. Leave all facial fields blank and set facial field tag weights to zero`;
                 }
                 if (imageType === "auto") {
                     prompt += `
-                        Determine if the image is portrait or full-body. For any body features that cannot be observed, use "not_visible".`;
+                        Determine if the image is portrait or full-body. For any body features that cannot be observed, leave them blank and set tag weight to zero.`;
                 }
 
                 const response = await ai.models.generateContent({
