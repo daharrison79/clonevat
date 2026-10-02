@@ -113,7 +113,7 @@
                 const imgId=`img_${String(imgCount).padStart(3,'0')}`;
 
                 const response=await ai.models.generateContent({
-                    model:'gemini-3.5-flash',
+                    model:'gemini-3.5-flash-lite',
                     contents:[
                         {inlineData:{mimeType: file.type, data: base64Data}},
                         'Analyse the image strictly for physical features. Ignore lighting, image quality, background, wardrobe and facial expressions. Return values according to the schema.'
